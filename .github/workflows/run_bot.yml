@@ -1,14 +1,17 @@
 name: Alpaca Bot Runner
 
 on:
-  push: # Runs every time you push code
+  #push: # Runs every time you push code
   schedule:
-    - cron: '*/10 * * * *' # Runs every 10 minutes
+    # Runs every hour only from 10am to 4pm ET (14:00 to 20:00 UTC)
+    - cron: '0 14-20 * * 1-5'
   workflow_dispatch: # Allows manual "Run" button in GitHub UI
 
 jobs:
   trade:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -28,3 +31,12 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         # This sends the output to the "Summary" page in GitHub
         run: python hello_alpaca.py >> $GITHUB_STEP_SUMMARY
+
+      - name: Commit and Push CSV changes
+        run: |
+          git config --global user.name "Alpaca-Bot"
+          git config --global user.email "actions@github.com"
+          git add watchlist.csv
+          # Only commit if there are actually changes to the file
+          git commit -m "Automated update: watchlist.csv [skip ci]" || echo "No changes to commit"
+          git push
